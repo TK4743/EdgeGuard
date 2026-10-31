@@ -1,6 +1,7 @@
+from collections import defaultdict, deque
+
 import numpy as np
-import pandas as pd
-from collections import deque
+
 
 def compute_payload_entropy(payloads):
     """
@@ -37,11 +38,8 @@ def extract_features(df):
     print("Extracting CAN_ID_INT...")
     df['CAN_ID_INT'] = df['CAN_ID'].apply(lambda x: int(str(x), 16)).astype(np.float32)
     
-    print("Extracting DLC and DLC_Anomaly_Flag...")
+    print("Extracting DLC...")
     df['DLC'] = df['DLC'].astype(np.float32)
-    # mode DLC per CAN_ID
-    dlc_modes = df.groupby('CAN_ID')['DLC'].agg(lambda x: x.mode()[0] if not x.mode().empty else x.iloc[0])
-    df['DLC_Anomaly_Flag'] = (df['DLC'] != df['CAN_ID'].map(dlc_modes)).astype(np.float32)
     
     print("Extracting Time_Delta...")
     # Time delta since last message of SAME CAN_ID
@@ -57,11 +55,6 @@ def extract_features(df):
         
     payloads = df[data_cols].values
     
-    print("Extracting Payload_Byte_Diff...")
-    shifted_payloads = df.groupby('CAN_ID')[data_cols].shift(1)
-    shifted_payloads = shifted_payloads.fillna(df[data_cols])
-    df['Payload_Byte_Diff'] = (df[data_cols] - shifted_payloads).abs().sum(axis=1).astype(np.float32)
-    
     # 4. Payload Entropy
     df['Payload_Entropy'] = compute_payload_entropy(payloads)
     
@@ -71,7 +64,7 @@ def extract_features(df):
     
     # 6. Hamming Weight
     def hamming_weight(row):
-        return sum(bin(val).count('1') for val in row)
+        return sum(val.bit_count() for val in row)
     
     df['Hamming_Weight'] = np.apply_along_axis(hamming_weight, 1, payloads).astype(np.float32)
     
@@ -88,7 +81,6 @@ def extract_features(df):
     counts_dict = {}
     
     # Inter arrival variance history
-    from collections import defaultdict
     id_delta_history = defaultdict(lambda: deque(maxlen=5))
     
     for i in range(N):
@@ -123,9 +115,10 @@ def apply_top_ids(df, top_ids):
         
     top_id_cols = [f'Is_{top_id}' for top_id in top_ids]
     feature_cols = [
-        'CAN_ID_INT', 'DLC', 'DLC_Anomaly_Flag', 'Time_Delta', 
-        'Payload_Entropy', 'Byte_Variance', 'Hamming_Weight', 'Payload_Byte_Diff',
+        'CAN_ID_INT', 'DLC', 'Time_Delta', 
+        'Payload_Entropy', 'Byte_Variance', 'Hamming_Weight',
         'ID_Freq_50', 'Inter_Arrival_Var'
     ] + top_id_cols
     
-    return df[feature_cols].astype(np.float32), df['Label']
+    labels = df['Label'] if 'Label' in df.columns else None
+    return df[feature_cols].astype(np.float32), labels

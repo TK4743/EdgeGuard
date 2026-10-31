@@ -1,13 +1,19 @@
+import os
+import sys
+import warnings
+
+import features
 import pandas as pd
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix
-import warnings
-import os
-import features
+from sklearn.model_selection import train_test_split
 
 os.environ['PYTHONWARNINGS'] = 'ignore'
 warnings.filterwarnings('ignore')
+
+if not os.path.exists('processed_data.csv'):
+    print('processed_data.csv not found. Please run load_data.py first.')
+    sys.exit(0)
 
 print('Loading data...')
 df = pd.read_csv('processed_data.csv')

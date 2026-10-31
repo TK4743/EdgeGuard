@@ -1,7 +1,10 @@
-import pandas as pd
-import numpy as np
-import scipy.stats
 import json
+import os
+from collections import defaultdict, deque
+
+import numpy as np
+import pandas as pd
+
 
 def test():
     columns = ['Timestamp', 'CAN_ID', 'DLC', 'DATA0', 'DATA1', 'DATA2', 'DATA3', 'DATA4', 'DATA5', 'DATA6', 'DATA7', 'Flag']
@@ -32,7 +35,7 @@ def test():
         _, counts = np.unique(row, return_counts=True)
         p = counts / 8.0
         entropy_vals[i] = -np.sum(p * np.log2(p))
-        hamming_weights[i] = sum(bin(int(val)).count('1') for val in row)
+        hamming_weights[i] = sum(int(val).bit_count() for val in row)
         
     df['Payload_Entropy'] = entropy_vals
     df['Byte_Variance'] = byte_var
@@ -44,7 +47,6 @@ def test():
     freq_50 = np.zeros(len(can_ids), dtype=np.float32)
     inter_arrival_var = np.zeros(len(can_ids), dtype=np.float32)
     
-    from collections import deque, defaultdict
     window = deque()
     counts_dict = {}
     id_delta_history = defaultdict(lambda: deque(maxlen=5))
@@ -70,10 +72,11 @@ def test():
     df['ID_Freq_50'] = freq_50
     df['Inter_Arrival_Var'] = inter_arrival_var
     
+    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'model_config.json')
     try:
-        with open('model_config.json', 'r') as f:
+        with open(config_path, 'r') as f:
             top_ids = json.load(f)['top_5_can_ids']
-    except:
+    except (FileNotFoundError, KeyError, json.JSONDecodeError, OSError):
         top_ids = ["043F", "0000", "0482", "04DD", "04A1"]
         
     for top_id in top_ids:

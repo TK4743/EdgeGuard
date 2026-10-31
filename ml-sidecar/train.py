@@ -1,16 +1,22 @@
-import os
 import json
-import time
-import pandas as pd
-import numpy as np
-from sklearn.model_selection import StratifiedKFold, GridSearchCV, train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix
-from imblearn.over_sampling import SMOTE
-import joblib
-from skl2onnx import convert_sklearn
-import warnings
 import os
+import time
+import warnings
+
+import joblib
+import numpy as np
+import pandas as pd
+from imblearn.over_sampling import SMOTE
+from skl2onnx import convert_sklearn
+from skl2onnx.common.data_types import FloatTensorType
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    precision_recall_fscore_support,
+)
+from sklearn.model_selection import GridSearchCV, StratifiedKFold, train_test_split
 
 # Ignore all warnings globally
 os.environ["PYTHONWARNINGS"] = "ignore"
@@ -22,6 +28,10 @@ DATA_FILE = 'processed_data.csv'
 MODEL_DIR = '.'
 
 def train_and_evaluate():
+    if not os.path.exists(DATA_FILE):
+        print(f"Dataset {DATA_FILE} not found. Please run load_data.py or provide {DATA_FILE} first.")
+        return
+
     print(f"Loading data from {DATA_FILE}...")
     full_df = pd.read_csv(DATA_FILE)
     print(f"Total dataset shape: {full_df.shape}")
@@ -63,51 +73,51 @@ def train_and_evaluate():
     
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     
-    # Approach 1: class_weight='balanced'
-    log_file = open("training_log.txt", "w")
-    log_file.write("Approach 1: class_weight='balanced'\n")
-    rf_balanced = RandomForestClassifier(class_weight='balanced', random_state=42, n_jobs=4)
-    grid_balanced = GridSearchCV(rf_balanced, param_grid, cv=cv, scoring='f1_macro', n_jobs=4)
-    start_train1 = time.time()
-    grid_balanced.fit(X_train, y_train)
-    print(f"class_weight='balanced' training completed in {time.time() - start_train1:.2f}s")
-    
-    y_pred_bal = grid_balanced.predict(X_test)
-    report_bal = classification_report(y_test, y_pred_bal)
-    log_file.write(f"class_weight='balanced' Best Params: {grid_balanced.best_params_}\n")
-    log_file.write(report_bal + "\n\n")
-    _, _, f1_bal, _ = precision_recall_fscore_support(y_test, y_pred_bal)
-    macro_f1_bal = np.mean(f1_bal)
-    print(f"class_weight='balanced' Fuzzy F1: {f1_bal[2]:.4f}, Macro F1: {macro_f1_bal:.4f}")
-    
-    # Approach 2: SMOTE
-    log_file.write("Approach 2: SMOTE\n")
-    smote = SMOTE(random_state=42)
-    X_train_sm, y_train_sm = smote.fit_resample(X_train, y_train)
-    rf_smote = RandomForestClassifier(random_state=42, n_jobs=4)
-    grid_smote = GridSearchCV(rf_smote, param_grid, cv=cv, scoring='f1_macro', n_jobs=4)
-    start_train2 = time.time()
-    grid_smote.fit(X_train_sm, y_train_sm)
-    print(f"SMOTE training completed in {time.time() - start_train2:.2f}s")
-    
-    y_pred_sm = grid_smote.predict(X_test)
-    _, _, f1_sm, _ = precision_recall_fscore_support(y_test, y_pred_sm)
-    macro_f1_sm = np.mean(f1_sm)
-    print(f"SMOTE Fuzzy F1: {f1_sm[2]:.4f}, Macro F1: {macro_f1_sm:.4f}")
-    
-    # Select best model based on Fuzzy F1
-    if f1_sm[2] > f1_bal[2]:
-        print("Selecting SMOTE model as it yields better Fuzzy attack F1.")
-        best_model = grid_smote.best_estimator_
-        y_pred = y_pred_sm
-    else:
-        print("Selecting class_weight='balanced' model as it yields better/equal Fuzzy attack F1.")
-        best_model = grid_balanced.best_estimator_
-        y_pred = y_pred_bal
+    with open("training_log.txt", "w") as log_file:
+        # Approach 1: class_weight='balanced'
+        log_file.write("Approach 1: class_weight='balanced'\n")
+        rf_balanced = RandomForestClassifier(class_weight='balanced', random_state=42, n_jobs=4)
+        grid_balanced = GridSearchCV(rf_balanced, param_grid, cv=cv, scoring='f1_macro', n_jobs=4)
+        start_train1 = time.time()
+        grid_balanced.fit(X_train, y_train)
+        print(f"class_weight='balanced' training completed in {time.time() - start_train1:.2f}s")
         
-    report_smote = classification_report(y_test, y_pred_sm)
-    log_file.write(f"SMOTE Best Params: {grid_smote.best_params_}\n")
-    log_file.write(report_smote + "\n\n")
+        y_pred_bal = grid_balanced.predict(X_test)
+        report_bal = classification_report(y_test, y_pred_bal)
+        log_file.write(f"class_weight='balanced' Best Params: {grid_balanced.best_params_}\n")
+        log_file.write(report_bal + "\n\n")
+        _, _, f1_bal, _ = precision_recall_fscore_support(y_test, y_pred_bal)
+        macro_f1_bal = np.mean(f1_bal)
+        print(f"class_weight='balanced' Fuzzy F1: {f1_bal[2]:.4f}, Macro F1: {macro_f1_bal:.4f}")
+        
+        # Approach 2: SMOTE
+        log_file.write("Approach 2: SMOTE\n")
+        smote = SMOTE(random_state=42)
+        X_train_sm, y_train_sm = smote.fit_resample(X_train, y_train)
+        rf_smote = RandomForestClassifier(random_state=42, n_jobs=4)
+        grid_smote = GridSearchCV(rf_smote, param_grid, cv=cv, scoring='f1_macro', n_jobs=4)
+        start_train2 = time.time()
+        grid_smote.fit(X_train_sm, y_train_sm)
+        print(f"SMOTE training completed in {time.time() - start_train2:.2f}s")
+        
+        y_pred_sm = grid_smote.predict(X_test)
+        _, _, f1_sm, _ = precision_recall_fscore_support(y_test, y_pred_sm)
+        macro_f1_sm = np.mean(f1_sm)
+        print(f"SMOTE Fuzzy F1: {f1_sm[2]:.4f}, Macro F1: {macro_f1_sm:.4f}")
+        
+        # Select best model based on Fuzzy F1
+        if f1_sm[2] > f1_bal[2]:
+            print("Selecting SMOTE model as it yields better Fuzzy attack F1.")
+            best_model = grid_smote.best_estimator_
+            y_pred = y_pred_sm
+        else:
+            print("Selecting class_weight='balanced' model as it yields better/equal Fuzzy attack F1.")
+            best_model = grid_balanced.best_estimator_
+            y_pred = y_pred_bal
+            
+        report_smote = classification_report(y_test, y_pred_sm)
+        log_file.write(f"SMOTE Best Params: {grid_smote.best_params_}\n")
+        log_file.write(report_smote + "\n\n")
     
     print(f"Best parameters: {best_model.get_params()}")
     

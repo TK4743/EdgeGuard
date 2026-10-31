@@ -1,12 +1,15 @@
 import os
-import json
 import time
-import pandas as pd
-import numpy as np
-import subprocess
-import onnxruntime as rt
+
 import joblib
-from sklearn.metrics import classification_report, confusion_matrix, precision_recall_fscore_support
+import numpy as np
+import onnxruntime as rt
+import pandas as pd
+from sklearn.metrics import (
+    classification_report,
+    confusion_matrix,
+    precision_recall_fscore_support,
+)
 
 DATA_DIR = '../data'
 
@@ -31,12 +34,17 @@ def run_audit():
         
     print("\nTrain/Test Split Ratio: 80% Train, 20% Test")
     print("Class Imbalance Report (Train Set):")
-    y_train = pd.read_csv('y_test.csv') # Just for test shape logic proxy, actual train is 80%
+    if os.path.exists('y_test.csv'):
+        pd.read_csv('y_test.csv')
     # We will just print the static true values from the earlier run
     print("Class 0 (Normal): 117565\nClass 1 (DoS): 9605\nClass 2 (Fuzzy): 7687\nClass 3 (Spoofing): 1143")
     
     print("\nB) FINAL MODEL METRICS")
     print("=======================================")
+    if not (os.path.exists('X_test.csv') and os.path.exists('y_test.csv') and os.path.exists('model.pkl')):
+        print("X_test.csv, y_test.csv, or model.pkl not found. Run train.py first to generate evaluation artifacts.")
+        return
+
     X_test = pd.read_csv('X_test.csv')
     y_test = pd.read_csv('y_test.csv')['Label']
     model = joblib.load('model.pkl')

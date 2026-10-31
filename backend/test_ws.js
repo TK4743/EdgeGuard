@@ -1,5 +1,5 @@
-const { Client } = require('@stomp/stompjs');
-const WebSocket = require('ws');
+import { Client } from '@stomp/stompjs';
+import WebSocket from 'ws';
 
 Object.assign(global, { WebSocket });
 

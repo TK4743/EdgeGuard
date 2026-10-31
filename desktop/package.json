@@ -11,13 +11,18 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "electron": "^31.0.0",
-    "electron-builder": "^24.13.3"
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0"
+  },
+  "overrides": {
+    "tar": "^7.5.22",
+    "minimatch": "^11.0.3"
   },
   "build": {
     "appId": "com.edgeguard.desktop",
     "files": [
       "main.js",
+      "preload.js",
       "frontend/**/*",
       "backend/**/*",
       "ml-sidecar/**/*",

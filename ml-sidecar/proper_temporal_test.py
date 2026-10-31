@@ -1,11 +1,11 @@
-import pandas as pd
-import numpy as np
 import os
+import warnings
+from datetime import datetime
+
+import features
+import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix
-import warnings
-import features
-from datetime import datetime
 
 os.environ['PYTHONWARNINGS'] = 'ignore'
 warnings.filterwarnings('ignore')

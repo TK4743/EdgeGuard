@@ -1,7 +1,7 @@
 import csv
-import random
-import time
 import os
+import random
+
 
 def generate_can_message(timestamp, attack_type=None):
     can_id = f"{random.randint(0, 2047):04x}"

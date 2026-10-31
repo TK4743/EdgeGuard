@@ -99,3 +99,11 @@
   background: #ced4da;
   border-radius: 3px;
 }
+
+.logo-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
+}

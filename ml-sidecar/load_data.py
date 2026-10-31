@@ -1,7 +1,7 @@
 import os
 import re
+
 import pandas as pd
-import numpy as np
 
 DATA_DIR = '../data'
 OUTPUT_FILE = 'processed_data.csv'

@@ -39,6 +39,8 @@ desktop/backend/
 # Python / ML caches
 __pycache__/
 *.pyc
+.ruff_cache/
+.agents/
 .ipynb_checkpoints/
 ml-sidecar/env/
 ml-sidecar/venv/
@@ -50,3 +52,14 @@ ml-sidecar/venv/
 *.suo
 *.user
 *.swp
+
+# Environment & Secrets (Anti-Leak Protocol)
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.pfx
+credentials.json
+id_rsa
+id_rsa.pub

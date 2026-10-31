@@ -1,30 +1,47 @@
-import onnxruntime as rt
-import numpy as np
-import joblib
-import pandas as pd
+import json
 import os
-import features
 
-MODEL_DIR = '.'
-DATA_FILE = 'processed_data.csv'
+import features
+import joblib
+import numpy as np
+import onnxruntime as rt
+import pandas as pd
+
+MODEL_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_FILE = os.path.join(MODEL_DIR, 'processed_data.csv')
+PARITY_FILE = os.path.join(MODEL_DIR, 'parity_test_data.json')
 
 def verify_models():
     print("Loading data for verification...")
-    # Read raw data
-    full_df = pd.read_csv(DATA_FILE)
+    if os.path.exists(DATA_FILE):
+        full_df = pd.read_csv(DATA_FILE).head(1000).copy()
+        full_df = features.extract_features(full_df)
+    elif os.path.exists(PARITY_FILE):
+        with open(PARITY_FILE, 'r') as f:
+            test_cases = json.load(f)
+        records = []
+        for tc in test_cases:
+            raw = tc['raw']
+            row = {
+                'Timestamp': raw['Timestamp'],
+                'CAN_ID': raw['CAN_ID'],
+                'DLC': raw['DLC'],
+                'Flag': raw['Flag'],
+            }
+            for i in range(8):
+                row[f'DATA{i}'] = raw['DATA'][i]
+            records.append(row)
+        full_df = pd.DataFrame(records)
+        full_df = features.extract_features(full_df)
+    else:
+        print("Neither processed_data.csv nor parity_test_data.json found.")
+        return
     
-    # We just need 1000 rows
-    full_df = full_df.head(1000).copy()
-    
-    # Extract features
-    full_df = features.extract_features(full_df)
-    
-    import json
     with open(os.path.join(MODEL_DIR, 'model_config.json'), 'r') as f:
         config = json.load(f)
     top_ids = config['top_5_can_ids']
     
-    X, y = features.apply_top_ids(full_df, top_ids)
+    X, _y = features.apply_top_ids(full_df, top_ids)
     
     X_batch = X.values.astype(np.float32)
     
